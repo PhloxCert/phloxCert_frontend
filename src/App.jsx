@@ -7,42 +7,45 @@ function App() {
   const account = useCurrentAccount();
   const { mutateAsync: signMessage } = useSignPersonalMessage();
   const navigate = useNavigate();
+
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Controllo sessione esistente
+  // Check existing session
   /*useEffect(() => {
     const userDid = localStorage.getItem('userDid');
     if (userDid) {
-      console.log("Sessione trovata:", userDid);
+      console.log("Session found:", userDid);
       navigate('/dashboard');
     }
   }, [navigate]);*/
 
   const loginConWallet = async () => {
-    if (!account) return alert("Per favore, connetti prima il tuo Wallet!");
+    if (!account) return alert("Please connect your Wallet first!");
     
     setLoading(true);
     setError(null);
     try {
-      // 1. Chiedi al backend il nonce
-      const resNonce = await fetch('http://localhost:8080/auth/nonce', {
+      // 1. Ask the backend for the nonce
+      const resNonce = await fetch(`${API_BASE_URL}/auth/nonce`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ address: account.address })
       });
       
-      if (!resNonce.ok) throw new Error("Errore nel generare il nonce");
+      if (!resNonce.ok) throw new Error("Error generating the nonce");
       const data = await resNonce.json();
       const nonce = data.nonce;
 
-      // 2. Firma il nonce
+      // 2. Sign the nonce
       const { signature } = await signMessage({
         message: new TextEncoder().encode(nonce),
       });
 
-      // 3. Verifica al backend
-      const resVerify = await fetch('http://localhost:8080/auth/verify', {
+      // 3. Verify with the backend
+      const resVerify = await fetch(`${API_BASE_URL}/auth/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -53,36 +56,36 @@ function App() {
 
       if (!resVerify.ok) {
         const errorData = await resVerify.json();
-        throw new Error(errorData.error || "Firma non valida");
+        throw new Error(errorData.error || "Invalid signature");
       }
 
       const verifyData = await resVerify.json();
-      console.log("Risposta completa dal backend:", verifyData);
-      console.log("Tipo di verifyData:", typeof verifyData);
-      console.log("Chiavi di verifyData:", Object.keys(verifyData));
+      console.log("Complete response from backend:", verifyData);
+      console.log("Type of verifyData:", typeof verifyData);
+      console.log("Keys of verifyData:", Object.keys(verifyData));
       
       if (!verifyData) {
-        throw new Error("Risposta vuota dal backend");
+        throw new Error("Empty response from backend");
       }
       
-      // Salva i dati dell'utente nel localStorage
+      // Save user data in localStorage
       localStorage.setItem('userDid', `did:iota:${account.address}`);
       localStorage.setItem('userAddress', account.address);
       localStorage.setItem('userRole', String(verifyData.role !== undefined ? verifyData.role : 0));
       localStorage.setItem('registered', String(verifyData.registered === true ? 'true' : 'false'));
 
-      console.log("Login verificato:", verifyData);
+      console.log("Login verified:", verifyData);
 
-      // Se l'utente è registrato nel contratto, vai al dashboard
-      // Altrimenti vai alla pagina di registrazione
+      // If the user is registered in the contract, go to dashboard
+      // Otherwise go to the registration page
       if (verifyData && verifyData.registered === true) {
         navigate('/dashboard');
       } else {
         navigate('/register');
       }
     } catch (err) {
-      console.error("Errore durante il login:", err);
-      setError(err.message || "Errore di connessione. Controlla che il backend sia attivo.");
+      console.error("Error during login:", err);
+      setError(err.message || "Connection error. Check that the backend is active.");
     } finally {
       setLoading(false);
     }
@@ -101,7 +104,7 @@ function App() {
       alignItems: 'center'
     }}>
       <h1 style={{ color: '#0f172a', marginBottom: '10px' }}>IOTA Local Dashboard</h1>
-      <p style={{ color: '#64748b', marginBottom: '30px' }}>Identità Digitale per Locali Pubblici</p>
+      <p style={{ color: '#64748b', marginBottom: '30px' }}>Digital Identity for Public Places</p>
       
       <div style={{ margin: '20px', display: 'flex', justifyContent: 'center'}}>
         <ConnectButton style={{backgroundColor: '#c3ccd4'}}/>
@@ -137,7 +140,7 @@ function App() {
             transition: 'all 0.3s ease'
           }}
         >
-          {loading ? "Verifica in corso..." : "Accedi con Wallet Identity"}
+          {loading ? "Verification in progress..." : "Access with Wallet Identity"}
         </button>
       )}
     </div>

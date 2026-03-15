@@ -5,17 +5,18 @@ import { useCurrentAccount, useSignAndExecuteTransaction } from '@iota/dapp-kit'
 import { Transaction } from '@iota/iota-sdk/transactions';
 import { IotaClient } from '@iota/iota-sdk/client';
 
-// CONFIGURAZIONE - Verifica che siano identici al backend
-const PACKAGE_ID = "0x9bf6b9515e995cb7cf2ee08a7a1e956454a9ab723d5b766e75a0575654df1579";
-const REGISTRY_ID = "0x6bace8e70cf7a7e19b60c35d51bc7a2b01a92d0c748d8cc9c9358072bc3cb56f";
+// CONFIGURATION - Ensure they match the backend
+const PACKAGE_ID = import.meta.env.VITE_PACKAGE_ID ?? "";
+const REGISTRY_ID = import.meta.env.VITE_REGISTRY_ID ?? "";
+const IOTA_NODE_URL = import.meta.env.VITE_IOTA_NODE_URL ?? "http://127.0.0.1:9000";
 
 function Register() {
   const account = useCurrentAccount();
   const navigate = useNavigate();
   const { mutate: signAndExecute } = useSignAndExecuteTransaction();
   
-  // Client configurato esplicitamente sulla porta locale 9000
-  const client = useMemo(() => new IotaClient({ url: "http://127.0.0.1:9000" }), []);
+  // Client configured from .env file (fallback to local port 9000)
+  const client = useMemo(() => new IotaClient({ url: IOTA_NODE_URL }), []);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -28,7 +29,7 @@ function Register() {
     role: '0' // 0 = Locale, 1 = Controllore
   });
 
-  // Protezione: Se non c'è il wallet, torna alla home
+  // Protection: If no wallet, return to home
   useEffect(() => {
     if (!account) {
       navigate('/');
@@ -45,30 +46,30 @@ function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!account) return setError("Wallet non connesso");
+    if (!account) return setError("Wallet not connected");
 
     setLoading(true);
     setError(null);
 
     try {
-      // 1. Check di connessione: Il frontend vede il contratto?
+      // 1. Connection check: Can the frontend see the contract?
       try {
         await client.getObject({ id: PACKAGE_ID });
       } catch (e) {
-        throw new Error("Contratto non trovato sulla rete locale. Verifica che iota-test-validator sia attivo e il wallet sia su Localhost.");
+        throw new Error("Contract not found on local network. Verify that iota-test-validator is active and the wallet is on Localhost.");
       }
 
       const txb = new Transaction();
       const encoder = new TextEncoder();
 
-      // Uniamo le info extra nella stringa 'name' accettata dal tuo contratto
+      // We combine the extra info in the 'name' string accepted by your contract
       const combinedName = `${formData.localName} (${formData.city}) - Prop: ${formData.ownerName}`;
       
-      // Conversione in vector<u8> per Move
+      // Conversion to vector<u8> for Move
       const addressBytes = Array.from(encoder.encode(account.address));
       const nameBytes = Array.from(encoder.encode(combinedName));
 
-      // Costruzione chiamata Move
+      // Building Move call
       txb.moveCall({
         target: `${PACKAGE_ID}::LocalRegistry::add_user`,
         arguments: [
@@ -79,34 +80,35 @@ function Register() {
         ],
       });
 
-      // Esecuzione tramite Wallet
+      // Execution via Wallet
       signAndExecute(
         { transaction: txb },
         {
           onSuccess: (result) => {
-            console.log("Transazione successiva:", result);
+            console.log("Transaction successful:", result);
             setSuccess(true);
             
-            // Salvataggio locale per persistenza UI
+            // Local saving for UI persistence
             localStorage.setItem('registered', 'true');
             localStorage.setItem('userRole', formData.role);
             localStorage.setItem('localName', formData.localName);
+            localStorage.setItem('ownerName', formData.ownerName);
 
-            // Reindirizzamento al dashboard
+            // Redirect to dashboard
             setTimeout(() => {
               navigate('/dashboard');
             }, 2500);
           },
           onError: (err) => {
-            console.error("Errore firma:", err);
-            setError(`Errore Wallet: ${err.message}`);
+            console.error("Signature error:", err);
+            setError(`Wallet error: ${err.message}`);
             setLoading(false);
           }
         }
       );
 
     } catch (err) {
-      console.error("Errore generale:", err);
+      console.error("General error:", err);
       setError(err.message);
       setLoading(false);
     }
@@ -116,8 +118,8 @@ function Register() {
     return (
       <div style={containerStyle}>
         <div style={successBoxStyle}>
-          <h2>✓ Registrazione Completata!</h2>
-          <p>Benvenuto nel registro IOTA. Verrai reindirizzato al tuo dashboard...</p>
+          <h2>✓ Registration Completed!</h2>
+          <p>Welcome to the IOTA registry. You will be redirected to your dashboard...</p>
         </div>
       </div>
     );
@@ -125,67 +127,67 @@ function Register() {
 
   return (
     <div style={containerStyle}>
-      <h1 style={{ color: '#0f172a', fontSize: '2rem' }}>Registra la tua Attività</h1>
+      <h1 style={{ color: '#0f172a', fontSize: '2rem' }}>Register Your Business</h1>
       <p style={{ color: '#64748b', marginBottom: '30px' }}>
-        Inserisci i dettagli. L'operazione scriverà i dati sulla blockchain locale.
+        Enter the details. The operation will write the data to the local blockchain.
       </p>
 
       <form onSubmit={handleSubmit} style={formStyle}>
         <div style={inputGroupStyle}>
-          <label style={labelStyle}>Nome del Locale</label>
+          <label style={labelStyle}>Business Name</label>
           <input
             type="text"
             name="localName"
             value={formData.localName}
             onChange={handleChange}
             required
-            placeholder="Es. Pizzeria da Mario"
+            placeholder="E.g. Mario's Pizzeria"
             style={inputStyle}
           />
         </div>
 
         <div style={inputGroupStyle}>
-          <label style={labelStyle}>Città</label>
+          <label style={labelStyle}>City</label>
           <input
             type="text"
             name="city"
             value={formData.city}
             onChange={handleChange}
             required
-            placeholder="Es. Roma"
+            placeholder="E.g. Rome"
             style={inputStyle}
           />
         </div>
 
         <div style={inputGroupStyle}>
-          <label style={labelStyle}>Nome Proprietario</label>
+          <label style={labelStyle}>Owner Name</label>
           <input
             type="text"
             name="ownerName"
             value={formData.ownerName}
             onChange={handleChange}
             required
-            placeholder="Es. Mario Rossi"
+            placeholder="E.g. Mario Rossi"
             style={inputStyle}
           />
         </div>
 
         <div style={inputGroupStyle}>
-          <label style={labelStyle}>Ruolo</label>
+          <label style={labelStyle}>Role</label>
           <select
             name="role"
             value={formData.role}
             onChange={handleChange}
             style={inputStyle}
           >
-            <option value="0">Esercente (Locale Pubblico)</option>
-            <option value="1">Controllore (Ispettore)</option>
+            <option value="0">Operator (Public Place)</option>
+            <option value="1">Inspector (Controller)</option>
           </select>
         </div>
 
         {error && (
           <div style={errorStyle}>
-            <strong>Attenzione:</strong> {error}
+            <strong>Attention:</strong> {error}
           </div>
         )}
 
@@ -198,7 +200,7 @@ function Register() {
             cursor: loading ? 'not-allowed' : 'pointer'
           }}
         >
-          {loading ? "In attesa del Wallet..." : "Registra su Blockchain"}
+          {loading ? "Waiting for Wallet..." : "Register on Blockchain"}
         </button>
 
         <button
@@ -206,7 +208,7 @@ function Register() {
           onClick={() => navigate('/')}
           style={backButtonStyle}
         >
-          Annulla
+          Cancel
         </button>
       </form>
     </div>

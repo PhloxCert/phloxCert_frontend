@@ -9,13 +9,16 @@ import App from './App.jsx';
 import Register from './Register.jsx';
 import Dashboard from './Dashboard.jsx';
 import History from './History.jsx';
+import Landing from './Landing.jsx';
 
 // Importa lo stile necessario per il tasto "Connect" del wallet
 import '@iota/dapp-kit/dist/index.css';
 
 // Configurazione per la rete locale IOTA (quella che gira sul tuo PC)
+const IOTA_NODE_URL = import.meta.env.VITE_IOTA_NODE_URL ?? getFullnodeUrl('localnet');
+
 const { networkConfig } = createNetworkConfig({
-  localnet: { url: getFullnodeUrl('localnet') },
+  localnet: { url: IOTA_NODE_URL },
 });
 
 const queryClient = new QueryClient();
@@ -31,6 +34,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
               <Route path="/register" element={<Register />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/history" element={<History />} />
+              <Route path="/landing/:address" element={<Landing />} />
             </Routes>
           </BrowserRouter>
         </WalletProvider>
