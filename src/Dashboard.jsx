@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCurrentAccount } from '@iota/dapp-kit';
-import Sidebar from './modules/ui/Sidebar'; // Make sure the path is correct
+import Sidebar from './modules/ui/Sidebar.jsx'; // Make sure the path is correct
 import { getStatus } from './modules/core/data.js';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
@@ -13,8 +13,18 @@ const Dashboard = () => {
   // States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userDid] = useState(localStorage.getItem('userDid'));
-  const [localName] = useState(localStorage.getItem('localName'));
-  const [ownerName] = useState(localStorage.getItem('ownerName'));
+  const [localName] = useState(localStorage.getItem('userName'));
+  const [profile] = useState({
+    name: localStorage.getItem('userName'),
+    role: localStorage.getItem('userRole'),
+    // Business
+    address: localStorage.getItem('businessAddress'),
+    vat: localStorage.getItem('vatNumber'),
+    // Tecnico
+    license: localStorage.getItem('licenseNumber'),
+    specialization: localStorage.getItem('specialization')
+  });
+
   const [iotaObjects, setIotaObjects] = useState([]);
   const [loadingAssets, setLoadingAssets] = useState(true);
   const [latestRecord, setLatestRecord] = useState(null);
@@ -139,7 +149,7 @@ const Dashboard = () => {
             {/* Header Section */}
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Safety Compliance Overview</h1>
+                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Safety Compliance Overview - Business Dashboard</h1>
                 <p className="text-sm text-slate-500">Digital identity and asset management</p>
               </div>
               <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200 flex items-center gap-2">
@@ -157,10 +167,25 @@ const Dashboard = () => {
                   </svg>
                 </div>
                 <div className="overflow-hidden">
-                  <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Verified IOTA DID</h3>
+                  <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">{profile.name}</h1>
+                  ---------------------------------------
+                  <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Verified IOTA DID:</h3>
                   <p className="text-sm font-mono text-slate-700 truncate">{userDid}</p>
-                  <p className="text-sm font-mono text-slate-700 truncate">Local Name: {localName}</p>
-                  <p className="text-sm font-mono text-slate-700 truncate">Owner Name: {ownerName}</p>
+                  <div className="profile-info">
+                    {profile.role === '1' && (
+                      <div className="business-details">
+                        <p><strong>Local address:</strong> {profile.address}</p>
+                        <p><strong>VAT Number:</strong> {profile.vat}</p>
+                      </div>
+                    )}
+
+                    {profile.role === '2' && (
+                      <div className="technician-details">
+                        <p><strong>License Number:</strong> {profile.license}</p>
+                        <p><strong>Specialization:</strong> {profile.specialization}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -206,54 +231,6 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* IOTA ASSETS SECTION (REAL FROM LEDGER) */}
-            <section className="pt-8">
-              <div className="flex items-center gap-2 mb-6">
-                <h2 className="text-xl font-bold text-slate-900">Digital Assets on IOTA</h2>
-                <span className="bg-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                  {iotaObjects.length}
-                </span>
-              </div>
-
-              {loadingAssets ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {[1, 2, 3].map(i => (
-                    <div key={i} className="h-40 bg-slate-200 animate-pulse rounded-xl"></div>
-                  ))}
-                </div>
-              ) : iotaObjects.length === 0 ? (
-                <div className="bg-white p-12 rounded-xl border-2 border-dashed border-slate-200 text-center">
-                  <p className="text-slate-400 font-medium">No objects found in the Ledger for this address.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {iotaObjects.map((obj) => (
-                    <div key={obj.data.objectId} className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-blue-400 transition-all group">
-                      <div className="flex justify-between items-start mb-3">
-                        <span className="text-[9px] font-black bg-blue-50 text-blue-600 px-2 py-1 rounded-md uppercase tracking-tighter">
-                          {obj.data.type.split('::').pop()}
-                        </span>
-                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                      </div>
-
-                      <h4 className="font-bold text-slate-800 text-sm mb-1 truncate">
-                        {obj.data.display?.data?.name || "Unlabeled Object"}
-                      </h4>
-                      <p className="text-[11px] text-slate-500 line-clamp-2 mb-4">
-                        {obj.data.display?.data?.description || "No description provided on-chain."}
-                      </p>
-
-                      <div className="pt-3 border-t border-slate-50 flex items-center justify-between">
-                        <span className="text-[10px] font-mono text-slate-400">ID: {obj.data.objectId.substring(0, 8)}...</span>
-                        <button className="text-[10px] font-bold text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                          VIEW DETAILS →
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
 
           </div>
         </main>

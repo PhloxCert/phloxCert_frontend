@@ -19,6 +19,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Initial project structure** with Vite and Tailwind CSS.
 - **Modular architecture** with `@iota/core` and `@iota/ui` aliases.
 - **Basic dashboard layout** and "Safety Pulse" component.
+- Deleted Digital Assets test from the Dashboard.
+- Added **TechnicianDashboard** with pending/certified document queue and wallet-signed VC issuance flow via useSignPersonalMessage
+- Added **BusinessDashboard** with certification status badges, full document history table, and a details modal showing VC issuer, certification date, and on-chain object ID
 
 ### Fixed
 - **State Persistence**: Resolved issue where `ownerName` was not correctly saved to `localStorage` during registration.
@@ -27,4 +30,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - Refactored `Dashboard.jsx` to use real production data instead of mocked certifications.
 - Moved upload logic into a modal-based workflow for better UX.
+
 

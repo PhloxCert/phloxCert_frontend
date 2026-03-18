@@ -10,7 +10,8 @@ import Register from './Register.jsx';
 import Dashboard from './Dashboard.jsx';
 import History from './History.jsx';
 import Landing from './Landing.jsx';
-
+import BusinessDashboard    from './BusinessDashboard.jsx';
+import TechnicianDashboard  from './TechnicianDashboard.jsx';
 // Importa lo stile necessario per il tasto "Connect" del wallet
 import '@iota/dapp-kit/dist/index.css';
 
@@ -21,7 +22,13 @@ const { networkConfig } = createNetworkConfig({
   localnet: { url: IOTA_NODE_URL },
 });
 
+const DashboardRouter = () => {
+  const role = localStorage.getItem('userRole');
+  return role === '2' ? <TechnicianDashboard /> : <BusinessDashboard />;
+};
+
 const queryClient = new QueryClient();
+
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -32,9 +39,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             <Routes>
               <Route path="/" element={<App />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/history" element={<History />} />
               <Route path="/landing/:address" element={<Landing />} />
+              <Route path="/dashboard" element={<DashboardRouter />} />
             </Routes>
           </BrowserRouter>
         </WalletProvider>

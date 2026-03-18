@@ -13,15 +13,6 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Check existing session
-  /*useEffect(() => {
-    const userDid = localStorage.getItem('userDid');
-    if (userDid) {
-      console.log("Session found:", userDid);
-      navigate('/dashboard');
-    }
-  }, [navigate]);*/
-
   const loginConWallet = async () => {
     if (!account) return alert("Please connect your Wallet first!");
     
@@ -38,11 +29,13 @@ function App() {
       if (!resNonce.ok) throw new Error("Error generating the nonce");
       const data = await resNonce.json();
       const nonce = data.nonce;
+      
 
       // 2. Sign the nonce
       const { signature } = await signMessage({
         message: new TextEncoder().encode(nonce),
       });
+      
 
       // 3. Verify with the backend
       const resVerify = await fetch(`${API_BASE_URL}/auth/verify`, {
@@ -67,21 +60,31 @@ function App() {
       if (!verifyData) {
         throw new Error("Empty response from backend");
       }
-      
-      // Save user data in localStorage
-      localStorage.setItem('userDid', `did:iota:${account.address}`);
+
+      // Salvataggio dati base
       localStorage.setItem('userAddress', account.address);
-      localStorage.setItem('userRole', String(verifyData.role !== undefined ? verifyData.role : 0));
-      localStorage.setItem('registered', String(verifyData.registered === true ? 'true' : 'false'));
+      localStorage.setItem('userDid', `did:iota:${account.address}`);
+      localStorage.setItem('registered', verifyData.registered ? 'true' : 'false');
 
-      console.log("Login verified:", verifyData);
+      const role = verifyData.role;
+      if (role === 1) {
+          localStorage.setItem('userRole', '1');
+          localStorage.setItem('userName', verifyData.name || 'Business User');
+          localStorage.setItem('businessAddress', verifyData.business_info?.address || 'N/A');
+          localStorage.setItem('vatNumber', verifyData.business_info?.vat_number || 'N/A');
+      }
 
-      // If the user is registered in the contract, go to dashboard
-      // Otherwise go to the registration page
-      if (verifyData && verifyData.registered === true) {
-        navigate('/dashboard');
+      if (role === 2) {
+          localStorage.setItem('userRole', '2');
+          localStorage.setItem('userName', verifyData.name || 'Technician');
+          localStorage.setItem('licenseNumber', verifyData.technician_info?.license_number || 'N/A');
+          localStorage.setItem('specialization', verifyData.technician_info?.specialization || 'N/A');
+      }
+      // Navigazione
+      if (verifyData.registered) {
+          navigate('/dashboard');
       } else {
-        navigate('/register');
+          navigate('/register');
       }
     } catch (err) {
       console.error("Error during login:", err);

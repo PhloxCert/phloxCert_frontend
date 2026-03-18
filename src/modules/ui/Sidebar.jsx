@@ -11,8 +11,7 @@ const Sidebar = ({ activePage }) => {
 
 
   const logout = () => {
-    localStorage.removeItem('userDid');
-    localStorage.removeItem('userKey');
+    localStorage.clear();
     navigate('/');
   };
 
