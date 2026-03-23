@@ -19,7 +19,7 @@ const Sidebar = ({ activePage }) => {
     <aside className="w-64 bg-phlox-navy text-white flex flex-col fixed inset-y-0 left-0 z-30 transition-transform duration-300 transform -translate-x-full md:translate-x-0 shadow-xl">
       {/* Logo */}
       <div className="h-24 flex items-center px-6 border-b border-slate-800 bg-slate-900">
-        <img src="../../logoPhloxCert.png" alt="PhloxCert Logo" className="h-14 w-auto drop-shadow-sm mr-3" />
+        <img src="../../../logoPhloxCert.png" alt="PhloxCert Logo" className="h-14 w-auto drop-shadow-sm mr-3" />
         <div>
           <span className="text-xl font-bold tracking-tight block leading-none">PhloxCert</span>
           <span className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">Immutable Fire Safety</span>
