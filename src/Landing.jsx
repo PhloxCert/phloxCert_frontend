@@ -79,7 +79,7 @@ const Landing = () => {
 
   const latestDoc = records[0];
   const pulseStatus = latestDoc ? getStatus(latestDoc.metadata?.expirationDate) : { label: 'No Data', color: 'gray' };
-  const localNameDisplay = 'Public Venue';
+  const localNameDisplay = localStorage.getItem('userName') || 'Unknown Venue';
   const themeColor = statusColors[pulseStatus.color];
 
   return (
