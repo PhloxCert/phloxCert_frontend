@@ -4,6 +4,11 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.1] - 24-03-2026
+
+### Fixed
+- **Sidebar Logo**: Fixed the logo path in the sidebar to use the public path instead of the relative path.
+
 ## [1.0.0] - 20-03-2026
 
 ### Added
