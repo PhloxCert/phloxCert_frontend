@@ -30,5 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - Refactored `Dashboard.jsx` to use real production data instead of mocked certifications.
 - Moved upload logic into a modal-based workflow for better UX.
+- Feature (Technician): Added did lookup, certification uploads, and notarization payment flow.
+- Feature (Business): Enabled viewing of technician-uploaded certifications.
 
 
