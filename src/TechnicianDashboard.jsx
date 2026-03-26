@@ -41,6 +41,14 @@ const ExpBadge = ({ expirationDate }) => {
 const TechnicianDashboard = () => {
   const userDid = localStorage.getItem('userDid'); 
   const userName = localStorage.getItem('userName');
+  const userRole = localStorage.getItem('userRole');
+
+  const [profile] = useState({
+    name: localStorage.getItem('userName'),
+    role: localStorage.getItem('userRole'),
+    license: localStorage.getItem('licenseNumber'),
+    specialization: localStorage.getItem('specialization')
+  });
 
   const currentAccount = useCurrentAccount(); 
   const iotaClient = useIotaClient();
@@ -195,6 +203,32 @@ const TechnicianDashboard = () => {
               <div>
                 <h1 className="text-2xl font-black text-slate-900 tracking-tight italic uppercase">Technician Dashboard</h1>
                 <p className="text-sm text-slate-500 font-bold uppercase tracking-tighter">Certify venues on IOTA Testnet</p>
+              </div>
+            </div>
+
+            {/* Profile */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-slate-900 flex items-center justify-center text-white shrink-0 font-bold text-lg">T</div>
+                <div className="overflow-hidden w-full">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h2 className="text-2xl font-extrabold text-slate-900 leading-tight">{profile.name}</h2>
+                      <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Verified IOTA DID</h3>
+                      <p className="text-xs font-mono text-slate-700 truncate max-w-md">{userDid}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-6 border-l border-slate-100 pl-6 h-full">
+                      <div>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">License Number</p>
+                        <p className="text-sm font-bold text-slate-700">{profile.license || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Specialization</p>
+                        <p className="text-sm font-bold text-slate-700">{profile.specialization || 'N/A'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 

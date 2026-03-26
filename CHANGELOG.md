@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Technician Profile**: Added a profile section to the Technician Dashboard to display the technician's information.
+
 ### Fixed
 - **Landing Page Data Persistence**: Fixed a bug where `localName` would persist from a previous successful request when a new request for a non-existent DID was made.
 - **Technician Dashboard Validation**: Improved the upload flow to validate and restrict notarization to Business DIDs only.
