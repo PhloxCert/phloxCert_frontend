@@ -24,18 +24,36 @@ const History = () => {
     setSelectedRecord(record);
     setIsDetailsModalOpen(true);
   };
+  const getIssuedBy = (rec) => {
+  return (
+    rec.metadata?.issuedBy ||
+    rec.metadata?.uploaderDid ||
+    rec.issuedBy ||
+    rec.technicianAddress ||
+    null
+  );
+};
 
   const fetchRecords = async () => {
     if (!userDid) return;
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE_URL}/api/v1/records/${encodeURIComponent(userDid)}`);
-      if (res.ok) {
-        const data = await res.json();
-        // Order from last inserted one (latest createdAt first)
-        const sortedData = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        setRecords(sortedData);
-      }
+      const res = await fetch(`${API_BASE_URL}/api/v1/records/all`);
+      if (!res.ok) throw new Error();
+
+      const data = await res.json();
+
+      const filtered = data.filter(rec => {
+        const issuer = getIssuedBy(rec);
+        return issuer && issuer === userDid;
+      });
+
+      const sorted = filtered.sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
+
+      setRecords(sorted);
+
     } catch (e) {
       console.error('Error fetching records:', e);
     } finally {

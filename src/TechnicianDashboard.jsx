@@ -42,53 +42,73 @@ const TechnicianDashboard = () => {
   const userDid = localStorage.getItem('userDid'); 
   const userName = localStorage.getItem('userName');
 
-  // Usiamo useSignTransaction + client.executeTransactionBlock
-  // per poter passare le options e ricevere objectChanges
   const currentAccount = useCurrentAccount(); 
   const iotaClient = useIotaClient();
   const { mutateAsync: signTransaction } = useSignTransaction();
 
   const [searchDid, setSearchDid] = useState('');
-  const [businessRecords, setBusinessRecords] = useState([]);
+  const [businessInfo, setBusinessInfo] = useState(null); // Dati anagrafici on-chain
+  const [businessRecords, setBusinessRecords] = useState([]); // Certificati dal backend
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [selectedBusiness, setSelectedBusiness] = useState(null);
 
   const [isUploading, setIsUploading] = useState(false);
   const [file, setFile] = useState(null);
   const [form, setForm] = useState({ fileName: '', expirationDate: '' });
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
   const handleSearch = async (e, didOverride) => {
-    if (e) e.preventDefault();
-    const did = didOverride ?? searchDid;
-    if (!did?.trim()) return;
+  if (e) e.preventDefault();
+  let rawInput = didOverride ?? searchDid;
+  if (!rawInput?.trim()) return;
 
-    setLoadingSearch(true);
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/records/${encodeURIComponent(did)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setBusinessRecords(Array.isArray(data) ? data : []);
-        setSelectedBusiness(did);
-      } else {
-        alert("Business DID not found or no records available.");
-      }
-    } catch (err) {
-      console.error("Search error:", err);
-    } finally {
-      setLoadingSearch(false);
+  // 1. Prepariamo i due formati
+  // L'address pulito per la blockchain (es. 0x123...)
+  const cleanAddress = rawInput.includes(':') ? rawInput.split(':').pop() : rawInput;
+  // Il DID completo per il database (es. did:iota:0x123...)
+  const fullDid = cleanAddress.startsWith('did:iota:') ? cleanAddress : `did:iota:${cleanAddress}`;
+
+  setLoadingSearch(true);
+  setBusinessInfo(null);
+  setBusinessRecords([]);
+  setSelectedBusiness(cleanAddress); // Salviamo l'address pulito per la UI
+
+  try {
+    // 2. Eseguiamo le chiamate con i formati corretti
+    const [resOnChain, resRecords] = await Promise.allSettled([
+      // La blockchain vuole l'ADDRESS (0x...)
+      fetch(`${API_BASE_URL}/api/v1/business/profile/${cleanAddress}`),
+      
+      // Il database/API asset probabilmente vuole il DID COMPLETO (did:iota:0x...)
+      // Se il tuo backend per i records si aspetta solo 0x, usa cleanAddress anche qui
+      fetch(`${API_BASE_URL}/api/v1/records/${encodeURIComponent(fullDid)}`)
+    ]);
+
+    // Gestione Profilo Blockchain
+    if (resOnChain.status === 'fulfilled' && resOnChain.value.ok) {
+      const data = await resOnChain.value.json();
+      setBusinessInfo(data.venue);
     }
-  };
+
+    // Gestione Record Database
+    if (resRecords.status === 'fulfilled' && resRecords.value.ok) {
+      const records = await resRecords.value.json();
+      console.log("Assets trovati:", records); // Verifica qui in console cosa torna
+      setBusinessRecords(Array.isArray(records) ? records : []);
+    }
+
+  } catch (err) {
+    console.error("Errore fetch:", err);
+  } finally {
+    setLoadingSearch(false);
+  }
+};
 
   const handleNotarize = async (e) => {
     e.preventDefault();
-
-    if (!currentAccount) {
-      alert("Connect IOTA wallet to notarize documents.");
-      return;
-    }
+    if (!currentAccount) { alert("Connect IOTA wallet to notarize documents."); return; }
 
     setIsUploading(true);
-
     try {
       const pubKey = currentAccount.publicKey;
       const pubKeyBase64 = Buffer.from(pubKey).toString('base64');
@@ -102,18 +122,13 @@ const TechnicianDashboard = () => {
       fd.append('technicianAddress', currentAccount.address); 
       fd.append('publicKey', pubKeyBase64);
 
-      const res = await fetch(`${API_BASE_URL}/api/v1/notarize/upload`, { 
-        method: 'POST', 
-        body: fd 
-      });
-
+      const res = await fetch(`${API_BASE_URL}/api/v1/notarize/upload`, { method: 'POST', body: fd });
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.error || "Errore nella preparazione del backend");
+        throw new Error(errorData.error || "Backend preparation failed");
       }
 
       const { txBytes } = await res.json();
-
       const bytes = Uint8Array.from(atob(txBytes), c => c.charCodeAt(0));
       const transaction = Transaction.from(bytes);
 
@@ -122,20 +137,15 @@ const TechnicianDashboard = () => {
       const result = await iotaClient.executeTransactionBlock({
         transactionBlock: signedBytes,
         signature,
-        options: {
-          showObjectChanges: true,
-          showEffects: true,
-        },
+        options: { showObjectChanges: true, showEffects: true },
       });
 
-      const objectId =
-        result.objectChanges?.find(c => c.type === 'created')?.objectId ??
-        result.effects?.created?.[0]?.reference?.objectId;
+      const objectId = result.objectChanges?.find(c => c.type === 'created')?.objectId ??
+                       result.effects?.created?.[0]?.reference?.objectId;
 
-      if (!objectId) {
-        throw new Error('objectId non trovato nel risultato della transazione');
-      }
+      if (!objectId) throw new Error('Transaction successful but objectId not found');
 
+      // Salvataggio finale dell'ID su IPFS/Backend
       await fetch(`${API_BASE_URL}/api/v1/identity/save-id`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -144,6 +154,8 @@ const TechnicianDashboard = () => {
 
       await new Promise(r => setTimeout(r, 1500));
       await handleSearch(null, selectedBusiness);
+      setForm({ fileName: '', expirationDate: '' });
+      setFile(null);
 
     } catch (err) {
       console.error("Workflow failed:", err);
@@ -161,28 +173,20 @@ const TechnicianDashboard = () => {
         <main className="flex-1 p-8">
           <div className="max-w-5xl mx-auto space-y-8">
             
-            {/* Header & Wallet Connection */}
+            {/* Header */}
             <div className="flex justify-between items-end">
               <div>
-                <h1 className="text-2xl font-black text-slate-900 tracking-tight">Direct Asset Notarization</h1>
-                <p className="text-sm text-slate-500">Issue and pay for compliance records using your wallet</p>
-              </div>
-              <div className="flex flex-col items-end gap-3">
-                <ConnectButton />
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-right min-w-[220px]">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Technician Identity</p>
-                  <p className="text-sm font-bold text-slate-900">{userName}</p>
-                  <p className="text-[10px] font-mono text-emerald-600 truncate max-w-[180px]">{userDid}</p>
-                </div>
+                <h1 className="text-2xl font-black text-slate-900 tracking-tight italic uppercase">Technician Dashboard</h1>
+                <p className="text-sm text-slate-500 font-bold uppercase tracking-tighter">Certify venues on IOTA Testnet</p>
               </div>
             </div>
 
-            {/* Business Search Bar */}
+            {/* Search Bar */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <form onSubmit={handleSearch} className="flex gap-4">
                 <input 
                   type="text" 
-                  placeholder="Paste Business DID (iota:...) to manage assets" 
+                  placeholder="Enter Venue DID (iota:...) to fetch on-chain data" 
                   value={searchDid}
                   onChange={(e) => setSearchDid(e.target.value)}
                   className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-slate-900 outline-none transition-all"
@@ -192,10 +196,41 @@ const TechnicianDashboard = () => {
                   disabled={loadingSearch}
                   className="bg-slate-900 text-white px-8 py-4 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all disabled:bg-slate-300"
                 >
-                  {loadingSearch ? 'Searching...' : 'Select Business'}
+                  {loadingSearch ? 'Verifying...' : 'Verify Venue'}
                 </button>
               </form>
             </div>
+
+            {/* Visualizzazione Dati Locale (On-Chain) */}
+            {selectedBusiness && businessInfo && (
+              <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-l-emerald-500 border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-6 animate-in fade-in slide-in-from-top-4">
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center text-2xl shadow-lg font-black">
+                      {businessInfo.name.charAt(0)}
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-white text-[8px] px-1.5 py-0.5 rounded-full border-2 border-white font-black uppercase shadow-sm">
+                      Live
+                    </div>
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900 leading-tight">{businessInfo.name}</h2>
+                    <p className="text-[10px] font-mono text-slate-400 uppercase tracking-tighter">Verified IOTA Object: {selectedBusiness.slice(0, 24)}...</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-8 border-l border-slate-100 pl-8 w-full md:w-auto">
+                  <div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Vat Number</p>
+                    <p className="text-sm font-bold text-slate-700">{businessInfo.vat}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Legal Address</p>
+                    <p className="text-sm font-bold text-slate-700 truncate max-w-[150px]">{businessInfo.address}</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {selectedBusiness && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -204,8 +239,11 @@ const TechnicianDashboard = () => {
                 <div className="lg:col-span-2 space-y-6">
                   <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                     <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                      <h2 className="text-xs font-black text-slate-900 uppercase tracking-widest">Business Assets</h2>
-                      <span className="text-[10px] font-bold text-slate-400 truncate max-w-[150px]">DID: {selectedBusiness}</span>
+                      <h2 className="text-xs font-black text-slate-900 uppercase tracking-widest">Current Certifications</h2>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">Synchronized</span>
+                      </div>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
@@ -213,12 +251,13 @@ const TechnicianDashboard = () => {
                           <tr>
                             <th className="px-6 py-4 text-left">Document</th>
                             <th className="px-6 py-4 text-left">Expiration</th>
-                            <th className="px-6 py-4 text-left">Issuer</th>
+                            <th className="px-6 py-4 text-left">Status</th>
+                            <th className="px-6 py-4 text-left">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                           {businessRecords.length === 0 ? (
-                            <tr><td colSpan="3" className="px-6 py-12 text-center text-slate-400 italic font-medium">No documents linked to this business identity yet.</td></tr>
+                            <tr><td colSpan="3" className="px-6 py-12 text-center text-slate-400 italic font-medium">No assets recorded for this identity.</td></tr>
                           ) : (
                             businessRecords.map(rec => (
                               <tr key={rec.objectId} className="hover:bg-slate-50 transition-colors">
@@ -226,20 +265,19 @@ const TechnicianDashboard = () => {
                                   {rec.metadata?.name}
                                   <p className="text-[10px] font-mono text-slate-400 mt-0.5">{rec.objectId.slice(0, 15)}...</p>
                                 </td>
-                                <td className="px-6 py-4">
-                                  <div className="flex flex-col gap-1">
-                                    <ExpBadge expirationDate={rec.metadata?.expirationDate} />
-                                    <span className="text-[10px] text-slate-400 font-mono">
-                                      {rec.metadata?.expirationDate
-                                        ? new Date(rec.metadata.expirationDate).toLocaleDateString()
-                                        : '—'}
-                                    </span>
-                                  </div>
+                                <td className="px-6 py-4 text-slate-500 font-mono text-[10px]">
+                                  {rec.metadata?.expirationDate ? new Date(rec.metadata.expirationDate).toLocaleDateString() : '—'}
                                 </td>
                                 <td className="px-6 py-4">
-                                  <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded">
-                                    {rec.metadata?.issuedBy?.slice(0, 15)}...
-                                  </span>
+                                  <ExpBadge expirationDate={rec.metadata?.expirationDate} />
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <button
+                                    onClick={() => setSelectedRecord(rec)}
+                                    className="px-3 py-1.5 bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-slate-200"
+                                  >
+                                    Details
+                                  </button>
                                 </td>
                               </tr>
                             ))
@@ -254,17 +292,16 @@ const TechnicianDashboard = () => {
                 <div className="lg:col-span-1">
                   <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6 sticky top-8">
                     <div className="mb-6">
-                      <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">New Certification</h3>
-                      <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase">Fees will be paid by your connected wallet</p>
+                      <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Issue Certification</h3>
+                      <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase">You are paying for the notarization gas fees</p>
                     </div>
                     
                     <form onSubmit={handleNotarize} className="space-y-4">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Document Title</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Certificate Name</label>
                         <input 
-                          type="text" 
-                          required
-                          placeholder="e.g. Fire Safety Certificate"
+                          type="text" required
+                          placeholder="Fire Safety, HACCP, etc."
                           value={form.fileName}
                           onChange={(e) => setForm({...form, fileName: e.target.value})}
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-slate-900 transition-all"
@@ -272,10 +309,9 @@ const TechnicianDashboard = () => {
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Expiration Date</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Valid Until</label>
                         <input 
-                          type="date" 
-                          required
+                          type="date" required
                           value={form.expirationDate}
                           onChange={(e) => setForm({...form, expirationDate: e.target.value})}
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-slate-900 transition-all"
@@ -283,19 +319,17 @@ const TechnicianDashboard = () => {
                       </div>
 
                       <div className="pt-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Technical Document (PDF)</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Upload PDF Evidence</label>
                         <div className="relative border-2 border-dashed border-slate-200 rounded-xl p-6 text-center bg-slate-50 hover:bg-slate-100 transition-all cursor-pointer group">
                           <input 
-                            type="file" 
-                            required
-                            accept=".pdf"
+                            type="file" required accept=".pdf"
                             onChange={(e) => setFile(e.target.files[0])}
                             className="absolute inset-0 opacity-0 cursor-pointer"
                           />
                           <div className="space-y-2">
-                            <span className="text-2xl group-hover:scale-110 transition-transform block">📄</span>
+                            <span className="text-2xl group-hover:rotate-12 transition-transform block">📂</span>
                             <span className="text-[10px] font-bold text-slate-500 truncate block px-2">
-                              {file ? file.name : 'Select PDF file'}
+                              {file ? file.name : 'Click to select PDF'}
                             </span>
                           </div>
                         </div>
@@ -306,16 +340,81 @@ const TechnicianDashboard = () => {
                         disabled={isUploading}
                         className="w-full bg-slate-900 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:bg-slate-700 hover:-translate-y-0.5 transition-all disabled:bg-slate-200 disabled:translate-y-0"
                       >
-                        {isUploading ? 'Processing...' : '🚀 Sign & Notarize'}
+                        {isUploading ? 'Sending to IOTA...' : '🚀 Sign & Notarize'}
                       </button>
                     </form>
 
                     {isUploading && (
-                      <div className="mt-4 p-3 bg-emerald-50 text-emerald-700 rounded-lg flex items-center justify-center gap-3 border border-emerald-100">
-                        <div className="w-3 h-3 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
-                        <span className="text-[9px] font-black uppercase tracking-widest">Waiting for Wallet confirmation...</span>
+                      <div className="mt-4 p-3 bg-slate-900 text-white rounded-lg flex items-center justify-center gap-3 animate-pulse">
+                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span className="text-[9px] font-black uppercase tracking-widest">Confirm on Wallet...</span>
                       </div>
                     )}
+                    {selectedRecord && (
+  <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden border border-slate-200 relative">
+
+      <button
+        onClick={() => setSelectedRecord(null)}
+        className="absolute top-4 right-4 text-slate-400 hover:text-slate-800"
+      >
+        ✕
+      </button>
+
+      <div className="p-8 space-y-6">
+
+        <h3 className="text-lg font-black">Certificate Details</h3>
+
+        {/* STATUS */}
+        <ExpBadge expirationDate={selectedRecord.metadata?.expirationDate} />
+
+        {/* INFO */}
+        <div className="space-y-3 text-sm">
+
+          <div>
+            <p className="text-xs text-slate-400 uppercase font-bold">Name</p>
+            <p className="font-bold">{selectedRecord.metadata?.name}</p>
+          </div>
+
+          <div>
+            <p className="text-xs text-slate-400 uppercase font-bold">Expiration</p>
+            <p>
+              {selectedRecord.metadata?.expirationDate
+                ? new Date(selectedRecord.metadata.expirationDate).toLocaleDateString()
+                : '—'}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs text-slate-400 uppercase font-bold">Object ID</p>
+            <p className="font-mono text-xs break-all">{selectedRecord.objectId}</p>
+          </div>
+
+          {selectedRecord.metadata?.issuedBy && (
+            <div>
+              <p className="text-xs text-slate-400 uppercase font-bold">Issued By</p>
+              <p className="font-mono text-xs break-all">{selectedRecord.metadata.issuedBy}</p>
+            </div>
+          )}
+        </div>
+
+        {/* DOWNLOAD */}
+        <a
+          href={
+            selectedRecord.metadata?.offchainUrl ||
+            `${API_BASE_URL}/api/v1/records/${selectedRecord.objectId}/download`
+          }
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block w-full text-center bg-slate-900 text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-700 transition-all"
+        >
+          ⬇ Download PDF
+        </a>
+
+      </div>
+    </div>
+  </div>
+)}
                   </div>
                 </div>
 
