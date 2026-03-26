@@ -47,8 +47,8 @@ const TechnicianDashboard = () => {
   const { mutateAsync: signTransaction } = useSignTransaction();
 
   const [searchDid, setSearchDid] = useState('');
-  const [businessInfo, setBusinessInfo] = useState(null); // Dati anagrafici on-chain
-  const [businessRecords, setBusinessRecords] = useState([]); // Certificati dal backend
+  const [businessInfo, setBusinessInfo] = useState(null); // On-chain profile data
+  const [businessRecords, setBusinessRecords] = useState([]); // Database/IPFS certificates
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [selectedBusiness, setSelectedBusiness] = useState(null);
 
@@ -56,49 +56,66 @@ const TechnicianDashboard = () => {
   const [file, setFile] = useState(null);
   const [form, setForm] = useState({ fileName: '', expirationDate: '' });
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [searchError, setSearchError] = useState(null);
 
   const handleSearch = async (e, didOverride) => {
   if (e) e.preventDefault();
   let rawInput = didOverride ?? searchDid;
   if (!rawInput?.trim()) return;
 
-  // 1. Prepariamo i due formati
-  // L'address pulito per la blockchain (es. 0x123...)
+  // 1. Prepare the two formats
+  // Clean address for the blockchain (e.g. 0x123...)
   const cleanAddress = rawInput.includes(':') ? rawInput.split(':').pop() : rawInput;
-  // Il DID completo per il database (es. did:iota:0x123...)
+  // Full DID for the database (e.g. did:iota:0x123...)
   const fullDid = cleanAddress.startsWith('did:iota:') ? cleanAddress : `did:iota:${cleanAddress}`;
 
   setLoadingSearch(true);
   setBusinessInfo(null);
   setBusinessRecords([]);
-  setSelectedBusiness(cleanAddress); // Salviamo l'address pulito per la UI
-
   try {
-    // 2. Eseguiamo le chiamate con i formati corretti
+    setSearchError(null);
+    // 2. Execute parallel calls with the correct formats
     const [resOnChain, resRecords] = await Promise.allSettled([
-      // La blockchain vuole l'ADDRESS (0x...)
+      // Blockchain expects the ADDRESS (0x...)
       fetch(`${API_BASE_URL}/api/v1/business/profile/${cleanAddress}`),
       
-      // Il database/API asset probabilmente vuole il DID COMPLETO (did:iota:0x...)
-      // Se il tuo backend per i records si aspetta solo 0x, usa cleanAddress anche qui
+      // Database/Pinata registry expects the FULL DID (did:iota:0x...)
+      // If your backend for records expects only 0x, use cleanAddress here as well
       fetch(`${API_BASE_URL}/api/v1/records/${encodeURIComponent(fullDid)}`)
     ]);
 
-    // Gestione Profilo Blockchain
-    if (resOnChain.status === 'fulfilled' && resOnChain.value.ok) {
-      const data = await resOnChain.value.json();
-      setBusinessInfo(data.venue);
+    // Blockchain Profile Handling
+    if (resOnChain.status === 'fulfilled') {
+      if (resOnChain.value.ok) {
+        const data = await resOnChain.value.json();
+        const role = data.venue?.role;
+
+        if (role === 2) {
+          setSearchError("Cannot certify a Technician identity. Please verify a Business DID.");
+          setSelectedBusiness(null);
+        } else {
+          setBusinessInfo(data.venue);
+          setSelectedBusiness(cleanAddress); // Only set if valid
+        }
+      } else if (resOnChain.value.status === 404) {
+        setSearchError("Identity not registered on-chain.");
+        setSelectedBusiness(null);
+      } else {
+        setSearchError("Error fetching identity profile.");
+        setSelectedBusiness(null);
+      }
     }
 
-    // Gestione Record Database
+    // Database Records Handling
     if (resRecords.status === 'fulfilled' && resRecords.value.ok) {
       const records = await resRecords.value.json();
-      console.log("Assets trovati:", records); // Verifica qui in console cosa torna
+      console.log("Assets found:", records); // Check console for the result
       setBusinessRecords(Array.isArray(records) ? records : []);
     }
 
   } catch (err) {
-    console.error("Errore fetch:", err);
+    console.error("Fetch error:", err);
+    setSearchError("An unexpected error occurred during search.");
   } finally {
     setLoadingSearch(false);
   }
@@ -145,7 +162,7 @@ const TechnicianDashboard = () => {
 
       if (!objectId) throw new Error('Transaction successful but objectId not found');
 
-      // Salvataggio finale dell'ID su IPFS/Backend
+      // Final save of the ID to IPFS/Backend
       await fetch(`${API_BASE_URL}/api/v1/identity/save-id`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -199,9 +216,14 @@ const TechnicianDashboard = () => {
                   {loadingSearch ? 'Verifying...' : 'Verify Venue'}
                 </button>
               </form>
+              {searchError && (
+                <div className="mt-4 p-3 bg-rose-50 border border-rose-100 rounded-xl text-rose-700 text-xs font-bold animate-in fade-in slide-in-from-top-2">
+                  ⚠️ {searchError}
+                </div>
+              )}
             </div>
 
-            {/* Visualizzazione Dati Locale (On-Chain) */}
+            {/* On-Chain Venue Data View */}
             {selectedBusiness && businessInfo && (
               <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-l-emerald-500 border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-6 animate-in fade-in slide-in-from-top-4">
                 <div className="flex items-center gap-4">

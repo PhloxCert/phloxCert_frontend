@@ -1,8 +1,19 @@
 # Changelog
 
-All notable changes to this project are documented in this file.
+All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+## [Unreleased]
+
+### Fixed
+- **Landing Page Data Persistence**: Fixed a bug where `localName` would persist from a previous successful request when a new request for a non-existent DID was made.
+- **Technician Dashboard Validation**: Improved the upload flow to validate and restrict notarization to Business DIDs only.
+
+### Changed
+- **Localization**: Translated all remaining Italian comments, UI labels, and sample data to English.
+- **Refactoring**: Standardized the use of `localName` across `Landing.jsx` and `App.jsx`, removing redundant `localStorage` dependencies.
+- **Frontend Implementation**: Changed the logic in order to permit only to the technician to upload documents and to the business to view them.
 
 ## [1.0.1] - 24-03-2026
 

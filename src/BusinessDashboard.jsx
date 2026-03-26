@@ -5,7 +5,7 @@ import Sidebar from './modules/ui/Sidebar.jsx';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 
-// ─── Logica scadenza ────────────────────────────────────────────────────────
+// ─── Expiration Logic ────────────────────────────────────────────────────────
 
 const getExpirationStatus = (expirationDate) => {
   if (!expirationDate) return { label: 'No Date', color: 'gray' };
@@ -35,7 +35,7 @@ const ExpBadge = ({ expirationDate }) => {
   );
 };
 
-// ─── Modal dettagli ──────────────────────────────────────────────────────────
+// ─── Details Modal ──────────────────────────────────────────────────────────
 
 const DetailsModal = ({ record, onClose }) => {
   if (!record) return null;
@@ -122,7 +122,7 @@ const DRow = ({ label, value }) => (
   </div>
 );
 
-// ─── Dashboard principale ─────────────────────────────────────────────────────
+// ─── Main Dashboard ───────────────────────────────────────────────────────────
 
 const BusinessDashboard = () => {
   const account  = useCurrentAccount();
@@ -183,11 +183,25 @@ const BusinessDashboard = () => {
     setError(null); setSuccess(null); setIsUploading(true);
     setStatusMessage('Preparing upload...');
     try {
+      setStatusMessage('Validating activity identity...');
+      const cleanActAddress = form.activityDid.includes(':') ? form.activityDid.split(':').pop() : form.activityDid;
+      const resProf = await fetch(`${API_BASE_URL}/api/v1/business/profile/${cleanActAddress}`);
+
+      if (!resProf.ok) {
+        throw new Error('Activity DID not found on-chain. Please verify the address.');
+      }
+
+      const profData = await resProf.json();
+      if (profData.venue?.role === 2) {
+        throw new Error('Cannot notarize for a Technician identity. Please use a Business DID.');
+      }
+
       const fd = new FormData();
       fd.append('file', file);
       fd.append('fileName', form.fileName);
       fd.append('expirationDate', form.expirationDate);
       fd.append('activityDid', form.activityDid);
+      fd.append('issuedBy', profile.name);
       fd.append('userDid', userDid);
       fd.append('uploaderDid', userDid);
 
@@ -208,7 +222,7 @@ const BusinessDashboard = () => {
     }
   };
 
-  // Prendi il record con scadenza più lontana nel futuro (o il più recente se tutti scaduti)
+  // Get the record with expiration furthest in the future (or most recent if all expired)
   const latestRecord = records[0] || null;
   const currentExp   = latestRecord?.metadata?.expirationDate || latestRecord?.expirationDate;
   const expStatus    = getExpirationStatus(currentExp);
@@ -308,7 +322,7 @@ const BusinessDashboard = () => {
               </button>
             </div>*/}
 
-            {/* Tabella documenti */}
+            {/* Documents table */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                 <h2 className="text-xs font-black text-slate-900 uppercase tracking-widest">All Documents</h2>
