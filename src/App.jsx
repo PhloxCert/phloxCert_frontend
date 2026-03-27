@@ -13,7 +13,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const loginConWallet = async () => {
+  const loginWithWallet = async () => {
     if (!account) return alert("Please connect your Wallet first!");
     
     setLoading(true);
@@ -61,7 +61,7 @@ function App() {
         throw new Error("Empty response from backend");
       }
 
-      // Salvataggio dati base
+      // Saving base data
       localStorage.setItem('userAddress', account.address);
       localStorage.setItem('userDid', `did:iota:${account.address}`);
       localStorage.setItem('registered', verifyData.registered ? 'true' : 'false');
@@ -80,7 +80,7 @@ function App() {
           localStorage.setItem('licenseNumber', verifyData.technician_info?.license_number || 'N/A');
           localStorage.setItem('specialization', verifyData.technician_info?.specialization || 'N/A');
       }
-      // Navigazione
+      // Navigation
       if (verifyData.registered) {
           navigate('/dashboard');
       } else {
@@ -128,7 +128,7 @@ function App() {
 
       {account && (
         <button 
-          onClick={loginConWallet} 
+          onClick={loginWithWallet} 
           disabled={loading}
           style={{ 
             padding: '12px 24px', 

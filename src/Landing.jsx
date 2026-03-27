@@ -10,6 +10,7 @@ const Landing = () => {
   const [loading, setLoading] = useState(true);
   const [verifyingId, setVerifyingId] = useState(null);
   const [verifyResult, setVerifyResult] = useState(null);
+  const [venueName, setVenueName] = useState('Loading...');
 
   const statusStyles = {
     green: "bg-emerald-100 text-emerald-800",
@@ -28,15 +29,43 @@ const Landing = () => {
   const fetchRecords = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE_URL}/api/v1/records/${encodeURIComponent(address)}`);
-      if (res.ok) {
-        const data = await res.json();
+      setVenueName('Loading...');
+      
+      const cleanAddress = address.includes(':') ? address.split(':').pop() : address;
+
+      // Parallel fetch for records and profile
+      const [resRecords, resProfile] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/v1/records/${encodeURIComponent(address)}`),
+        fetch(`${API_BASE_URL}/api/v1/business/profile/${cleanAddress}`)
+      ]);
+
+      let finalName = 'Unknown Venue';
+
+      if (resProfile.ok) {
+        const profData = await resProfile.json();
+        if (profData.venue?.name) {
+          // If it's a technician (role === 2), show "Authorized Technician" instead of the name
+          finalName = profData.venue.role === 2 ? 'Authorized Technician' : profData.venue.name;
+        }
+      }
+
+      if (resRecords.ok) {
+        const data = await resRecords.json();
         // Sort by createdAt descending and take top 3
         const sortedData = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 3);
         setRecords(sortedData);
+        
+        // Fallback to record name if profile fetch didn't yield a name
+        if (finalName === 'Unknown Venue' && sortedData[0]?.metadata?.issuedBy) {
+          finalName = sortedData[0].metadata.issuedBy;
+        }
       }
+
+      setVenueName(finalName);
+
     } catch (e) {
-      console.error('Error fetching records:', e);
+      console.error('Error fetching data:', e);
+      setVenueName('Unknown Venue');
     } finally {
       setLoading(false);
     }
@@ -79,7 +108,6 @@ const Landing = () => {
 
   const latestDoc = records[0];
   const pulseStatus = latestDoc ? getStatus(latestDoc.metadata?.expirationDate) : { label: 'No Data', color: 'gray' };
-  const localNameDisplay = localStorage.getItem('userName') || 'Unknown Venue';
   const themeColor = statusColors[pulseStatus.color];
 
   return (
@@ -97,7 +125,7 @@ const Landing = () => {
             IOTA Verified Safety Pulse
           </div>
           <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-none drop-shadow-lg">
-            {localNameDisplay}
+            {venueName}
           </h1>
           <p className="text-white/80 font-mono text-xs md:text-sm break-all max-w-xl mx-auto opacity-70">
             {address}
