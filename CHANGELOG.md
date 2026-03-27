@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.1.0] - 27-03-2026
+
 ### Added
 - **Technician Profile**: Added a profile section to the Technician Dashboard to display the technician's information.
 
