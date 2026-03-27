@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Buffer } from 'buffer';
 import Sidebar from './modules/ui/Sidebar.jsx';
 import { 
@@ -54,7 +54,7 @@ const TechnicianDashboard = () => {
   const iotaClient = useIotaClient();
   const { mutateAsync: signTransaction } = useSignTransaction();
 
-  const [searchDid, setSearchDid] = useState('');
+  const [searchDid, setSearchDid] = useState(() => localStorage.getItem('lastSearchDid') || '');
   const [businessInfo, setBusinessInfo] = useState(null); // On-chain profile data
   const [businessRecords, setBusinessRecords] = useState([]); // Database/IPFS certificates
   const [loadingSearch, setLoadingSearch] = useState(false);
@@ -65,6 +65,13 @@ const TechnicianDashboard = () => {
   const [form, setForm] = useState({ fileName: '', expirationDate: '' });
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [searchError, setSearchError] = useState(null);
+
+  useEffect(() => {
+  const savedDid = localStorage.getItem('lastSearchDid');
+  if (savedDid) {
+    handleSearch(null, savedDid);
+  }
+}, []);
 
   const handleSearch = async (e, didOverride) => {
   if (e) e.preventDefault();
@@ -101,16 +108,20 @@ const TechnicianDashboard = () => {
         if (role === 2) {
           setSearchError("Cannot certify a Technician identity. Please verify a Business DID.");
           setSelectedBusiness(null);
+          localStorage.removeItem('lastSearchDid');
         } else {
           setBusinessInfo(data.venue);
           setSelectedBusiness(cleanAddress); // Only set if valid
+          localStorage.setItem('lastSearchDid', cleanAddress);
         }
       } else if (resOnChain.value.status === 404) {
         setSearchError("Identity not registered on-chain.");
         setSelectedBusiness(null);
+        localStorage.removeItem('lastSearchDid');
       } else {
         setSearchError("Error fetching identity profile.");
         setSelectedBusiness(null);
+        localStorage.removeItem('lastSearchDid');
       }
     }
 
@@ -181,7 +192,7 @@ const TechnicianDashboard = () => {
         })
       });
 
-      await new Promise(r => setTimeout(r, 1500));
+      await new Promise(r => setTimeout(r, 3000));
       await handleSearch(null, selectedBusiness);
       setForm({ fileName: '', expirationDate: '' });
       setFile(null);
