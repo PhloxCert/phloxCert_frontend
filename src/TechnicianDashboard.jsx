@@ -192,7 +192,7 @@ const TechnicianDashboard = () => {
         })
       });
 
-      await new Promise(r => setTimeout(r, 7000));
+      await new Promise(r => setTimeout(r, 5000));
       await handleSearch(null, selectedBusiness);
       setForm({ fileName: '', expirationDate: '' });
       setFile(null);
