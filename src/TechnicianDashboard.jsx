@@ -142,6 +142,7 @@ const TechnicianDashboard = () => {
       fd.append('file', file);
       fd.append('fileName', form.fileName);
       fd.append('activityDid', selectedBusiness);
+      fd.append('uploaderDid', userDid);
       fd.append('issuedBy', userDid);
       fd.append('expirationDate', form.expirationDate);
       fd.append('technicianAddress', currentAccount.address); 
@@ -170,11 +171,14 @@ const TechnicianDashboard = () => {
 
       if (!objectId) throw new Error('Transaction successful but objectId not found');
 
-      // Final save of the ID to IPFS/Backend
       await fetch(`${API_BASE_URL}/api/v1/identity/save-id`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ objectId, activityDid: selectedBusiness })
+        body: JSON.stringify({ 
+          objectId, 
+          activityDid: selectedBusiness,
+          uploaderDid: userDid
+        })
       });
 
       await new Promise(r => setTimeout(r, 1500));
