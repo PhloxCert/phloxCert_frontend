@@ -20,7 +20,7 @@ const Dashboard = () => {
     // Business
     address: localStorage.getItem('businessAddress'),
     vat: localStorage.getItem('vatNumber'),
-    // Tecnico
+    // Technician
     license: localStorage.getItem('licenseNumber'),
     specialization: localStorage.getItem('specialization')
   });
@@ -62,11 +62,25 @@ const Dashboard = () => {
     setStatusMessage('Preparing upload...');
 
     try {
+      setStatusMessage('Validating activity identity...');
+      const cleanActAddress = form.activityDid.includes(':') ? form.activityDid.split(':').pop() : form.activityDid;
+      const resProf = await fetch(`${API_BASE_URL}/api/v1/business/profile/${cleanActAddress}`);
+      
+      if (!resProf.ok) {
+        throw new Error('Activity DID not found on-chain. Please verify the address.');
+      }
+      
+      const profData = await resProf.json();
+      if (profData.venue?.role === 2) {
+        throw new Error('Cannot notarize for a Technician identity. Please use a Business DID.');
+      }
+
       const fd = new FormData();
       fd.append('file', file);
       fd.append('fileName', form.fileName);
       fd.append('expirationDate', form.expirationDate);
       fd.append('activityDid', form.activityDid);
+      fd.append('issuedBy', localName);
       fd.append('userDid', userDid);
       fd.append('uploaderDid', userDid);
 
