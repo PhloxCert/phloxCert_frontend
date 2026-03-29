@@ -245,10 +245,6 @@ function App() {
           PhloxCert transforms fire safety compliance into a <strong>zero-trust, verifiable system</strong> —
           where every inspection is cryptographically secured, publicly auditable, and impossible to manipulate.
         </p>
-        <p className="body-p">
-          This eliminates blind trust and replaces it with verifiable truth — ensuring that safety data
-          cannot be altered, hidden, or denied.
-        </p>
         <div className="hero-actions">
           {account ? (
             <button className="btn-primary" onClick={loginWithWallet} disabled={loading}>
