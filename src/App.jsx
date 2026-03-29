@@ -92,18 +92,18 @@ function App() {
 
   const pillars = [
     { label: 'Common', text: 'Passive inspections and superficial maintenance affect millions of public venues globally.' },
-    { label: 'In Crescendo', text: 'Growing legal liabilities and demands for transparency from insurers and the tourism sector.' },
-    { label: 'Urgent', text: 'Disasters like Crans-Montana prove safety is a here-and-now requirement, not a future checkbox.' },
-    { label: 'Mandatory', text: 'Fire safety is governed by strict laws, yet enforcement mechanisms are often non-existent or ignored.' },
-    { label: 'Frequent', text: 'Safety checks occur daily or monthly — manual processes are inefficient and prone to human error.' },
+    { label: 'Growing', text: 'Increasing legal liabilities and strict regulations (such as Italian Decree 09/2021) demand higher transparency from insurers and the tourism sector.' },
+    { label: 'Urgent', text: 'Disasters prove that safety is a present necessity, not a future obligation.' },
+    { label: 'Mandatory', text: 'Technicians often take over undocumented systems, operating in a legal limbo without protection.' },
+    { label: 'Frequent', text: 'Safety checks must be repeated over time, making manual processes inefficient and prone to human error.' },
   ];
 
   const features = [
-    { icon: '🔐', title: 'Wallet-Based Auth', text: 'Secure access for inspectors and operators using IOTA DIDs — no passwords, no breach risk.' },
-    { icon: '📦', title: 'Digital Twin NFTs', text: 'Every safety device is tokenised on-chain, preventing generic or duplicated inspections.' },
-    { icon: '🛡', title: 'Locked Notarisations', text: 'SHA256-hashed, unalterable proof-of-inspection. No backdating, no deletion — ever.' },
-    { icon: '📊', title: 'Dual-Identity Tracking', text: 'Independent attribution for the uploader inspector and the inspected establishment.' },
-    { icon: '📱', title: 'Public Verification', text: 'Anyone verifies a venue\'s safety status via QR code — no wallet or login required.' },
+    { icon: '🔐', title: 'Wallet-Based Authentication', text: 'Secure access for inspectors and operators using IOTA DIDs.' },
+    { icon: '🛡', title: 'Locked Notarisations', text: 'Unalterable proof-of-inspection with SHA256 integrity hashes, preventing backdating or deletion.' },
+    { icon: '📊', title: 'Dual-Identity Attribution', text: 'Independent tracking for both the inspector (uploader) and the inspected establishment.' },
+    { icon: '📱', title: 'Public Verification Portal', text: 'Anyone can verify a venue’s safety status via QR code, without wallet or login.' },
+    { icon: '⏱', title: 'Time-Stamped Records', text: 'Each inspection is automatically timestamped on the Tangle, ensuring chronological integrity.' },
     { icon: '⛓', title: 'IOTA Move Contracts', text: 'Smart contracts manage the user registry and the full lifecycle of notarisation objects.' },
   ];
 
@@ -242,8 +242,12 @@ function App() {
           <em>on the Tangle.</em>
         </h1>
         <p className="hero-sub">
-          PhloxCert turns fire safety certifications into <strong>unalterable blockchain records</strong> —
-          anchored to IOTA, verifiable by anyone, and impossible to falsify or neglect.
+          PhloxCert transforms fire safety compliance into a <strong>zero-trust, verifiable system</strong> —
+          where every inspection is cryptographically secured, publicly auditable, and impossible to manipulate.
+        </p>
+        <p className="body-p">
+          This eliminates blind trust and replaces it with verifiable truth — ensuring that safety data
+          cannot be altered, hidden, or denied.
         </p>
         <div className="hero-actions">
           {account ? (
@@ -270,14 +274,14 @@ function App() {
           <div className="panel">
             <h2>A structural failure in<br /><span>fire safety monitoring</span></h2>
             <p>
-              The tragedy of Crans-Montana was not an accident — it was a symptom of a systemic
-              collapse in compliance monitoring. Investigations revealed the site had not undergone
-              a safety inspection in over five years, with blocked exits and non-functional extinguishers.
+              The tragedy of Crans-Montana was not just an accident — it exposed a structural failure in safety monitoring.
+              Investigations revealed that the site had not undergone any inspection for over five years, with blocked exits
+              and non-functional extinguishers during a disaster that claimed 40 lives.
             </p>
             <p>
-              The root cause: <strong>opacity and manipulability of safety data</strong>. Traditional
-              paper trails and local databases can be altered, allowing negligence to go unnoticed
-              until disaster strikes. PhloxCert addresses this by turning safety into an immutable black box.
+              The root cause is <strong>opacity and manipulability of safety data</strong>. Traditional compliance systems rely
+              entirely on trust: PDFs, reports, and GPS logs are stored on centralized systems where data can be altered,
+              backdated, or manipulated without detection.
             </p>
             <div className="stat-row">
               <span className="stat-num">40</span>
@@ -304,26 +308,28 @@ function App() {
         <div className="solution-box">
           <h2>The <em>"Black Box"</em> of building safety</h2>
           <p className="body-p">
-            PhloxCert leverages the IOTA Protocol to provide an unalterable architecture of trust.
-            By decentralising inspection records onto the Tangle, we ensure that negligence cannot
-            be hidden — every check, or deliberate lack thereof, becomes part of a permanent audit trail.
+            PhloxCert leverages the IOTA Protocol to build a strictly mathematical "Architecture of Trust",
+            moving from internal traceability to universal certification. Every inspection is transformed
+            into a cryptographic proof anchored to a public ledger.
           </p>
           <p className="body-p">
-            Moving from checkbox compliance to a verifiable, public record that regulators,
-            insurers, and citizens can rely on — in real time.
+            This eliminates blind trust and replaces it with verifiable truth — ensuring that safety data
+            cannot be altered, hidden, or denied.
           </p>
           <div className="sol-grid">
             <div className="sol-point">
-              <div className="sol-title">Negligence cannot be hidden</div>
-              <p>Every inspection (or missed one) is permanently recorded on the Tangle with a cryptographic timestamp.</p>
+              <div className="sol-title">Zero-Trust Integrity</div>
+              <p>A cryptographic hash guarantees that even the smallest modification invalidates the document.</p>
             </div>
+
             <div className="sol-point">
-              <div className="sol-title">Real-time awareness</div>
-              <p>Consumers verify a venue's safety status instantly via QR code — no wallet, no account required.</p>
+              <div className="sol-title">Non-Repudiability of Origin</div>
+              <p>Once notarised, no one can deny when a record was created, protecting technicians from liability.</p>
             </div>
+
             <div className="sol-point">
-              <div className="sol-title">Enforcement through transparency</div>
-              <p>An immutable, verifiable audit trail that regulators and insurers can actually rely on.</p>
+              <div className="sol-title">Real-Time Awareness</div>
+              <p>Consumers and stakeholders can verify a venue’s safety status instantly via QR code.</p>
             </div>
           </div>
         </div>
