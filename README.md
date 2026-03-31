@@ -38,16 +38,18 @@ Then open the URL that Vite prints in the terminal (usually `http://localhost:51
 
 ## 🔍 What this project does
 
+- Provides a custom deshboard for Technician and Business accounts
 - Provides authentication via wallet signature (nonce challenge)
-- **Public Verification Portal**: Dedicated `/landing/:address` route for consumers to verify establishment safety pulse.
-- **On-Chain Audit**: Fetch and display the latest 3 certifications for any registered DID.
-- **Zero-Login Integrity Check**: Integrated tools for document verification without requiring user wallets.
-- Calls backend endpoints (`/auth/nonce`, `/auth/verify`, `/api/objects/:address`)
 - Calls IOTA wallet / dapp-kit to submit transaction signatures when registering an identity
 
----
+### Technician Dashboard
+- insert a business DID to fetch all the certifications of the business
+- upload through the form a new certification
+- provides the history of all the certifications published by the Technician
 
-## 🧩 How to add a new environment variable
-1. Add it to `.env.example`
-2. Use it in the app via `import.meta.env.VITE_<NAME>`
-3. Restart the dev server if it is running
+### Business Dashboard
+- provides all the certifications uploaded for the Business
+- provides the status of the certifications: valid, expiring and expired
+
+### Public Verification Portal
+- Dedicated `/landing/did:iota:address` route for consumers to verify establishment safety pulse
